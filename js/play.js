@@ -6,7 +6,6 @@ var distnb;
 
 //MAPAS
 var map;
-var ground;
 
 //PERSONAGENS
 var bruce;
@@ -22,7 +21,6 @@ var cacaSnd;
 //MOVIMENTO DO BRUCE
 var bruce_tween;
 var allowed_move =true;
-var last_valid_pos;
 
 //MARCAÇÕES
 var thegameover = false;
@@ -52,7 +50,7 @@ create: function() {
 
     map = this.game.add.tilemap('ninomap'); //Criando a referência do mapa
 	map.addTilesetImage('tilesheet', 'tilesheet'); //Criando a referência do tileset pro mapa
-	ground = map.createLayer('background'); //Criando a camada da grama (nome deve ser igual está no Tiled)
+	var ground = map.createLayer('background'); //Criando a camada da grama (nome deve ser igual está no Tiled)
     ground.resizeWorld(); //Redefinindo o tamanho do 'mundo' para o tamanho da camada básica
     map.setCollision(1624);
 
@@ -67,11 +65,11 @@ create: function() {
     
     //NINO
     nino = this.game.add.sprite(64, 64, 'Snino'); //Adicionando a sprite do Nino
-    nino.animations.add('dir', [12, 13, 14, 15], 10, true);
-    nino.animations.add('esq', [4, 5, 6, 7], 10, true);
-    nino.animations.add('cima', [8, 9, 10, 11], 10, true);
-    nino.animations.add('baixo', [0, 1, 2, 3], 10, true);
-    nino.frame = 0;
+    nino.animations.add('dir', [12, 13, 14, 15], 4, true);
+    nino.animations.add('esq', [4, 5, 6, 7], 4, true);
+    nino.animations.add('cima', [8, 9, 10, 11], 4, true);
+    nino.animations.add('baixo', [0, 1, 2, 3], 4, true);
+    nino.frame = 12;
 
     game.physics.enable(bruce); //Incluindo Bruce à física
     game.physics.enable(nino); //Incluindo Nino à física
@@ -167,15 +165,13 @@ update: function() {
 
 bruce_tween_finished: function() { allowed_move=true; },
 
-ninoMorde: function() { lateSnd.play();
-
-    bruce_tween.stop();
+ninoMorde: function() { lateSnd.play(); bruce_tween.stop();
 
     live = lives.getFirstAlive();
 
     if (live) { live.kill(); }
 
-    bruce.body.x = 700; bruce.body.y = 50; setTimeout(this.bruce_tween_finished, 3000);
+    bruce.body.x = 704; bruce.body.y = 54; setTimeout(this.bruce_tween_finished, 3000);
 
     if (lives.countLiving() < 1)
     {
@@ -188,14 +184,6 @@ ninoMorde: function() { lateSnd.play();
         press.onDown.addOnce(this.restart,this);
     }
      console.log("NINO - Mordeu!");
-},
-
-bruce_collision: function(){
-    bruce_tween.stop();
-    allowed_move = true;
-    // Bruce deve se mover para última posição válida
-    bruce.body.position.x = last_valid_pos[0];
-    bruce.body.position.y = last_valid_pos[1];
 },
 
 collectPoop: function(bruce, poop) { pazSnd.play();
