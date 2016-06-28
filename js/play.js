@@ -2,7 +2,6 @@
 var pathfinder;
 var ninoparado = true;
 var ninovel = 150;
-var distnb;
 
 //MAPAS
 var map;
@@ -29,6 +28,7 @@ var pontosT;
 var lives;
 var stateImg;
 var intcaca;
+var force_nino = false;
 
 var playState = {
 
@@ -47,6 +47,9 @@ create: function() {
 
     //MAPA - I.A NINO
     pathfinder = game.plugins.add(Phaser.Plugin.PathFinderPlugin); //Adicionando o plugin que faz o Nino andar
+    bound_func = this.callback_function.bind(this);
+
+    pathfinder.setCallbackFunction(bound_func);
 
     map = this.game.add.tilemap('ninomap'); //Criando a referência do mapa
 	map.addTilesetImage('tilesheet', 'tilesheet'); //Criando a referência do tileset pro mapa
@@ -96,45 +99,65 @@ create: function() {
     goImg = this.game.add.sprite(this.game.world.centerX,this.game.world.centerY,'gameisover');
     goImg.anchor.setTo(0.5, 0.5);
     goImg.visible = false;
+
+    //PARÂMETROS NINO I.A.
+    this.path = [];
+    this.i = 0;
+    force_nino=true;
+    this.obj_x = -100;
+    this.obj_y = -100;
 },
 
-findPathTo: function(tilex, tiley) { //FUNÇÃO PARA O NINO ANDAR - recebe NinoXdestino e NinoYdestino -
-    pathfinder.setCallbackFunction(function(path) {
-        path = path || [];
-        ninoparado = false;
-        var i = 0;
-        var newn_x = 0, newn_y = 0;
-        var interval = setInterval(function () {
-            if(i == path.length-1 || thegameover == true){
-                clearInterval(interval);
-                ninoparado = true;
-                nino_tween.stop();
-                nino.animations.stop(); } //se ele atingir o destino ou o jogo terminar.
-                
-                    newn_x = path[i].x*32;
-                    newn_y = path[i].y*32;
-                        if ( path[i].x > Math.floor(nino.body.x / 32)) { nino.animations.play('dir'); }
-                        else if ( path[i].x < Math.floor(nino.body.x / 32)) { nino.animations.play('esq'); }
-                        else if ( path[i].y > Math.floor(nino.body.y / 32)) { nino.animations.play('baixo'); }
-                        else if ( path[i].y < Math.floor(nino.body.y / 32)) { nino.animations.play('cima'); }
-                
-                            nino_tween = game.add.tween(nino);
-                            nino_tween.to({x: newn_x, y: newn_y}, 100);
-                            nino_tween.start();
-            i++; }, ninovel);   });
+callback_function: function(path) { this.i = 1; this.path = path; },
 
-pathfinder.preparePathCalculation([Math.floor(nino.body.x / 32), Math.floor(nino.body.y / 32)], [tilex, tiley]);
-pathfinder.calculatePath();
+nino_step_function: function() {
+    nino_tween = game.add.tween(nino);
+    new_x = this.path[this.i].x * 32;
+    new_y = this.path[this.i].y * 32;
+    if (Phaser.Math.distance(nino.body.x, nino.body.y, bruce.body.x, bruce.body.y) < 200){ var vel = 280; } else { vel = 350; }
+    nino_tween.to({x: new_x, y: new_y}, vel).onComplete.add((function() { this.nino_moving = false; }).bind(this));
+    if (this.path[this.i].x > Math.floor(nino.body.x / 32)) { nino.animations.play('dir'); }
+                    else if ( this.path[this.i].x < Math.floor(nino.body.x / 32)) { nino.animations.play('esq'); }
+                    else if ( this.path[this.i].y > Math.floor(nino.body.y / 32)) { nino.animations.play('baixo'); }
+                    else if ( this.path[this.i].y < Math.floor(nino.body.y / 32)) { nino.animations.play('cima'); }
+    this.i++;
+    this.nino_moving = true;
+    nino_tween.start();
+},
 
+nino_ai: function(){
+    if (this.nino_moving) return
+    if(this.recalq){ this.recalc_path(); this.recalq = false; }
+    if (this.i < this.path.length) { this.nino_step_function() }
+},
+
+recalc_path: function(){
+    pathfinder.preparePathCalculation([Math.floor(nino.body.x / 32), Math.floor(nino.body.y / 32)], [Math.floor(this.obj_x / 32), Math.floor(this.obj_y / 32)]);
+    pathfinder.calculatePath();
+},
+
+should_recalc: function(new_x, new_y) {
+    if (Phaser.Math.distance(nino.body.x, nino.body.y, bruce.body.x, bruce.body.y) < 200 && (new_x != this.obj_x || new_y != this.obj_y)){
+        return true;
+    } else if(Phaser.Math.distance(Math.floor(new_x / 32), Math.floor(new_y / 32), Math.floor(this.obj_x / 32), Math.floor(this.obj_y / 32)) >= 3){
+        return true;
+    } else { return false; }
+},
+
+go_get_him_nino: function(new_x, new_y, force) {
+    this.recalq = force || this.should_recalc(new_x, new_y);
+    if (this.recalq){
+        this.obj_x = new_x;
+        this.obj_y = new_y;
+    }
 },
 
 update: function() {
 
-        distnb = Math.floor(Phaser.Math.distance(nino.body.x, nino.body.y, bruce.body.x, bruce.body.y));
-
-        if (distnb <= 200) { ninovel = 300; } else { ninovel = 500; }
-
-        if (ninoparado == true && thegameover !== true) { this.findPathTo((Math.floor(bruce.body.x / 32)), (Math.floor(bruce.body.y / 32))); }
+    if (force_nino){
+        this.go_get_him_nino(bruce.body.x, bruce.body.y, true);
+        force_nino = false;
+    }
 
     if (allowed_move){
         //O movimento do bruce será grid based e utilizará uma tween para dar continuidade ao movimento
@@ -152,13 +175,16 @@ update: function() {
             
             tile = map.getTileWorldXY(new_x, new_y, 32, 32);
             if (tile.index !== 1624){
+                allowed_move = false;
                 bruce_tween = this.game.add.tween(bruce);
                 bruce_tween.to({x: new_x, y: new_y}, 300).onComplete.add(this.bruce_tween_finished);
                 bruce_tween.start();
-                allowed_move = false;
+                // Se Bruce esta andando entao Bruce esta andando devemos informar ao nino sua nova posição
+                this.go_get_him_nino(new_x, new_y);
             }            
         }
     }
+    this.nino_ai();
     game.physics.arcade.overlap(bruce, poops, this.collectPoop, null, this); //Controle para saber se Bruce passou por um cocô (recebe as sprites e chama o método)
     game.physics.arcade.overlap(nino, bruce, this.ninoMorde, null, this); //Controle para saber se Nino passou por Bruce (recebe as sprites e chama o método)
 },
@@ -208,4 +234,3 @@ restart: function() {
 // - Animação da morte
 // - Animação bruce
 // - Estado de vitória
-// - Inteligência do nino
