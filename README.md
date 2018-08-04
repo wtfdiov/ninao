@@ -1,5 +1,5 @@
 # ninao
-[Nino: the poopy dog] (http://sitediov.xyz/ninao/game.html)
+[Nino: the poopy dog] (http://wtfdiov.github.io/ninao/)
 
 Projeto desenvolvido utilizando o framework [PhaserJS] (http://phaser.io/).
 
